@@ -3,16 +3,16 @@ package modules
 import (
 	"fmt"
 
-	"github.com/anonyindian/gotgproto/dispatcher"
-	"github.com/anonyindian/gotgproto/dispatcher/handlers"
-	"github.com/anonyindian/gotgproto/ext"
 	"github.com/anonyindian/logger"
+	"github.com/celestix/gotgproto/dispatcher"
+	"github.com/celestix/gotgproto/dispatcher/handlers"
+	"github.com/celestix/gotgproto/ext"
 	"github.com/gigauserbot/giga/bot"
 	"github.com/gigauserbot/giga/bot/helpmaker"
 	"github.com/gotd/td/tg"
 )
 
-func (m *module) LoadHelp(dispatcher *dispatcher.CustomDispatcher) {
+func (m *module) LoadHelp(dispatcher dispatcher.Dispatcher) {
 	var l = m.Logger.Create("HELP")
 	defer l.ChangeLevel(logger.LevelInfo).Println("LOADED")
 	helpmaker.SetMainHelp("<b><u>The GIGA Userbot</u></b>\n\nHere is the help menu:", "html")
@@ -38,7 +38,7 @@ func helpCmd(ctx *ext.Context, u *ext.Update) error {
 	})
 	switch {
 	case chat.IsAChannel():
-		ctx.Client.ChannelsDeleteMessages(ctx, &tg.ChannelsDeleteMessagesRequest{
+		ctx.Raw.ChannelsDeleteMessages(ctx, &tg.ChannelsDeleteMessagesRequest{
 			Channel: &tg.InputChannel{
 				ChannelID:  chat.GetID(),
 				AccessHash: chat.GetAccessHash(),
@@ -46,7 +46,7 @@ func helpCmd(ctx *ext.Context, u *ext.Update) error {
 			ID: []int{u.EffectiveMessage.ID},
 		})
 	default:
-		ctx.Client.MessagesDeleteMessages(ctx, &tg.MessagesDeleteMessagesRequest{
+		ctx.Raw.MessagesDeleteMessages(ctx, &tg.MessagesDeleteMessagesRequest{
 			Revoke: true,
 			ID:     []int{u.EffectiveMessage.ID},
 		})

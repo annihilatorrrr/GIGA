@@ -3,17 +3,17 @@ package modules
 import (
 	"reflect"
 
-	"github.com/anonyindian/gotgproto/dispatcher"
-	"github.com/anonyindian/gotgproto/dispatcher/handlers"
-	"github.com/anonyindian/gotgproto/ext"
 	"github.com/anonyindian/logger"
+	"github.com/celestix/gotgproto/dispatcher"
+	"github.com/celestix/gotgproto/dispatcher/handlers"
+	"github.com/celestix/gotgproto/ext"
 )
 
 type module struct {
 	Logger *logger.Logger
 }
 
-func Load(l *logger.Logger, dispatcher *dispatcher.CustomDispatcher) {
+func Load(l *logger.Logger, dispatcher dispatcher.Dispatcher) {
 	l = l.Create("MODULES")
 	defer l.ChangeLevel(logger.LevelMain).Println("LOADED")
 	Type := reflect.TypeOf(&module{l})

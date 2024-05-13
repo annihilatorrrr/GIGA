@@ -10,9 +10,9 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers/filters/callbackquery"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers/filters/inlinequery"
-	"github.com/anonyindian/gotgproto"
 	"github.com/anonyindian/logger"
 	"github.com/gigauserbot/giga/bot/helpmaker"
+	"github.com/gigauserbot/giga/config"
 )
 
 func helpInline(b *gotgbot.Bot, ctx *ext.Context) error {
@@ -41,7 +41,7 @@ func helpInline(b *gotgbot.Bot, ctx *ext.Context) error {
 
 func helpCallback(b *gotgbot.Bot, ctx *ext.Context) error {
 	query := ctx.CallbackQuery
-	if query.From.Id != gotgproto.Self.ID {
+	if query.From.Id != config.Self.ID {
 		query.Answer(b, &gotgbot.AnswerCallbackQueryOpts{
 			Url: fmt.Sprintf("t.me/%s?start=deploy_own_via_help", strings.TrimPrefix(b.Username, "@")),
 		})

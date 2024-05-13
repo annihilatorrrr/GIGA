@@ -6,8 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/anonyindian/gotgproto/sessionMaker"
 	"github.com/anonyindian/logger"
+	"github.com/celestix/gotgproto/sessionMaker"
+	"github.com/gotd/td/tg"
 )
 
 const DEBUG = false
@@ -28,6 +29,8 @@ type config struct {
 	BotToken          string `json:"bot_token,omitempty"`
 }
 
+var Self *tg.User
+
 func Load(l *logger.Logger) {
 	l = l.Create("CONFIG")
 	defer l.ChangeLevel(logger.LevelMain).Println("LOADED")
@@ -47,20 +50,22 @@ func Load(l *logger.Logger) {
 	}
 }
 
-func GetSessionString() string {
+func getSessionString() string {
 	if ValueOf.TestServer {
 		return ValueOf.TestSessionString
 	}
 	return ValueOf.SessionString
 }
 
-func GetSessionType() sessionMaker.SessionType {
+func GetSession() sessionMaker.SessionConstructor {
+	sessionString := getSessionString()
+	const sessionName = "giga"
 	switch strings.ToLower(ValueOf.SessionType) {
 	case "pyrogram", "pyro":
-		return sessionMaker.PyrogramSession
+		return sessionMaker.PyrogramSession(sessionString).Name(sessionName)
 	case "gotgproto", "native":
-		return sessionMaker.StringSession
+		return sessionMaker.StringSession(sessionString).Name(sessionName)
 	default:
-		return sessionMaker.TelethonSession
+		return sessionMaker.TelethonSession(sessionString).Name(sessionName)
 	}
 }

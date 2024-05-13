@@ -5,10 +5,10 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/anonyindian/gotgproto/dispatcher"
-	"github.com/anonyindian/gotgproto/dispatcher/handlers"
-	"github.com/anonyindian/gotgproto/ext"
 	"github.com/anonyindian/logger"
+	"github.com/celestix/gotgproto/dispatcher"
+	"github.com/celestix/gotgproto/dispatcher/handlers"
+	"github.com/celestix/gotgproto/ext"
 	"github.com/gigauserbot/giga/bot/helpmaker"
 	"github.com/gotd/td/tg"
 )
@@ -25,7 +25,7 @@ func Shellout(command string) (error, string, string) {
 	return err, stdout.String(), stderr.String()
 }
 
-func (m *module) LoadShell(dispatcher *dispatcher.CustomDispatcher) {
+func (m *module) LoadShell(dispatcher dispatcher.Dispatcher) {
 	var l = m.Logger.Create("SHELL")
 	defer l.ChangeLevel(logger.LevelInfo).Println("LOADED")
 	helpmaker.SetModuleHelp("shell", "help")
@@ -35,7 +35,7 @@ func (m *module) LoadShell(dispatcher *dispatcher.CustomDispatcher) {
 func sh(ctx *ext.Context, u *ext.Update) error {
 	chat := u.EffectiveChat()
 	// msg := u.EffectiveMessage
-	cmd := strings.Fields(u.EffectiveMessage.Message)
+	cmd := strings.Fields(u.EffectiveMessage.Text)
 	if len(cmd) == 1 {
 		_, err := ctx.EditMessage(chat.GetID(), &tg.MessagesEditMessageRequest{
 			ID:      u.EffectiveMessage.ID,

@@ -7,21 +7,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anonyindian/gotgproto"
-	"github.com/anonyindian/gotgproto/dispatcher"
-	"github.com/anonyindian/gotgproto/dispatcher/handlers"
-	"github.com/anonyindian/gotgproto/dispatcher/handlers/filters"
-	"github.com/anonyindian/gotgproto/ext"
-	"github.com/anonyindian/gotgproto/parsemode/entityhelper"
-	"github.com/anonyindian/gotgproto/types"
 	"github.com/anonyindian/logger"
+	"github.com/celestix/gotgproto/dispatcher"
+	"github.com/celestix/gotgproto/dispatcher/handlers"
+	"github.com/celestix/gotgproto/dispatcher/handlers/filters"
+	"github.com/celestix/gotgproto/ext"
+	"github.com/celestix/gotgproto/parsemode/entityhelper"
+	"github.com/celestix/gotgproto/types"
 	"github.com/gigauserbot/giga/bot/helpmaker"
 	"github.com/gigauserbot/giga/db"
 	"github.com/gigauserbot/giga/utils"
 	"github.com/gotd/td/tg"
 )
 
-func (m *module) LoadMisc(dp *dispatcher.CustomDispatcher) {
+func (m *module) LoadMisc(dp dispatcher.Dispatcher) {
 	var l = m.Logger.Create("MISC")
 	defer l.ChangeLevel(logger.LevelInfo).Println("LOADED")
 	helpmaker.SetModuleHelp("misc", `
@@ -43,9 +42,9 @@ func (m *module) LoadMisc(dp *dispatcher.CustomDispatcher) {
 func jsonify(ctx *ext.Context, u *ext.Update) error {
 	chat := u.EffectiveChat()
 	msg := u.EffectiveMessage
-	if id := msg.ReplyTo.ReplyToMsgID; id != 0 {
+	if reply, ok := msg.ReplyTo.(*tg.MessageReplyHeader); ok && reply.ReplyToMsgID != 0 {
 		m, err := ctx.GetMessages(chat.GetID(), []tg.InputMessageClass{&tg.InputMessageID{
-			ID: id,
+			ID: reply.ReplyToMsgID,
 		}})
 		if err != nil {
 			ctx.EditMessage(chat.GetID(), &tg.MessagesEditMessageRequest{
@@ -56,7 +55,7 @@ func jsonify(ctx *ext.Context, u *ext.Update) error {
 		}
 		md, ok := m[0].(*tg.Message)
 		if ok {
-			msg = md
+			msg = types.ConstructMessage(md)
 		}
 	}
 	b, err := json.MarshalIndent(msg, "", "    ")
@@ -103,7 +102,7 @@ func ping(ctx *ext.Context, u *ext.Update) error {
 }
 
 func tagLogger(ctx *ext.Context, u *ext.Update) error {
-	args := strings.Fields(u.EffectiveMessage.Message)
+	args := strings.Fields(u.EffectiveMessage.Text)
 	chat := u.EffectiveChat()
 	if len(args) > 1 {
 		switch args[1] {
@@ -143,7 +142,7 @@ func checkTags(ctx *ext.Context, u *ext.Update) error {
 	if user != nil && user.Bot {
 		return nil
 	}
-	if !(u.EffectiveMessage.Mentioned || (chat.IsAUser() && chat.GetID() != gotgproto.Self.ID)) {
+	if !(u.EffectiveMessage.Mentioned || (chat.IsAUser() && chat.GetID() != ctx.Self.ID)) {
 		return nil
 	}
 	if !db.GetTagLogger() {

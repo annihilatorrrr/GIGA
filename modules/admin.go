@@ -4,19 +4,18 @@ import (
 	"fmt"
 	"html"
 
-	"github.com/anonyindian/gotgproto"
-	"github.com/anonyindian/gotgproto/dispatcher"
-	"github.com/anonyindian/gotgproto/dispatcher/handlers"
-	"github.com/anonyindian/gotgproto/ext"
-	"github.com/anonyindian/gotgproto/parsemode/stylisehelper"
 	"github.com/anonyindian/logger"
+	"github.com/celestix/gotgproto/dispatcher"
+	"github.com/celestix/gotgproto/dispatcher/handlers"
+	"github.com/celestix/gotgproto/ext"
+	"github.com/celestix/gotgproto/parsemode/stylisehelper"
 	"github.com/gigauserbot/giga/bot/helpmaker"
 	"github.com/gigauserbot/giga/utils"
 	"github.com/gotd/td/telegram/message/styling"
 	"github.com/gotd/td/tg"
 )
 
-func (m *module) LoadAdmin(dispatcher *dispatcher.CustomDispatcher) {
+func (m *module) LoadAdmin(dispatcher dispatcher.Dispatcher) {
 	var l = m.Logger.Create("ADMIN")
 	defer l.ChangeLevel(logger.LevelInfo).Println("LOADED")
 	helpmaker.SetModuleHelp("admin", `
@@ -57,7 +56,7 @@ func ban(ctx *ext.Context, u *ext.Update) error {
 	} else {
 		text := stylisehelper.Start(styling.Plain("Successfully banned "))
 		text.Mention("this user", target).Plain(".")
-		builder := gotgproto.Sender.Self().Edit(u.EffectiveMessage.ID)
+		builder := ctx.Sender.Self().Edit(u.EffectiveMessage.ID)
 		builder.StyledText(ctx, text.StoArray...)
 	}
 	return dispatcher.EndGroups
@@ -86,7 +85,7 @@ func unban(ctx *ext.Context, u *ext.Update) error {
 	} else {
 		text := stylisehelper.Start(styling.Plain("Successfully unbanned "))
 		text.Mention("this user", target).Plain(".")
-		builder := gotgproto.Sender.Self().Edit(u.EffectiveMessage.ID)
+		builder := ctx.Sender.Self().Edit(u.EffectiveMessage.ID)
 		builder.StyledText(ctx, text.StoArray...)
 	}
 	return dispatcher.EndGroups
@@ -94,24 +93,24 @@ func unban(ctx *ext.Context, u *ext.Update) error {
 
 func del(ctx *ext.Context, u *ext.Update) error {
 	chat := u.EffectiveChat()
-	reply := u.EffectiveMessage.ReplyTo.ReplyToMsgID
-	if reply == 0 {
+	reply, ok := u.EffectiveMessage.ReplyTo.(*tg.MessageReplyHeader)
+	if ok && reply.ReplyToMsgID == 0 {
 		ctx.DeleteMessages(chat.GetID(), []int{u.EffectiveMessage.ID})
 		return dispatcher.EndGroups
 	}
-	ctx.DeleteMessages(chat.GetID(), []int{u.EffectiveMessage.ID, reply})
+	ctx.DeleteMessages(chat.GetID(), []int{u.EffectiveMessage.ID, reply.ReplyToMsgID})
 	return dispatcher.EndGroups
 }
 
 func purge(ctx *ext.Context, u *ext.Update) error {
 	chat := u.EffectiveChat()
-	reply := u.EffectiveMessage.ReplyTo.ReplyToMsgID
-	if reply == 0 {
+	reply, ok := u.EffectiveMessage.ReplyTo.(*tg.MessageReplyHeader)
+	if ok && reply.ReplyToMsgID == 0 {
 		ctx.DeleteMessages(chat.GetID(), []int{u.EffectiveMessage.ID})
 		return dispatcher.EndGroups
 	}
-	toDel := []int{u.EffectiveMessage.ID, reply}
-	for i := reply; i < u.EffectiveMessage.ID; i++ {
+	toDel := []int{u.EffectiveMessage.ID, reply.ReplyToMsgID}
+	for i := reply.ReplyToMsgID; i < u.EffectiveMessage.ID; i++ {
 		toDel = append(toDel, i)
 	}
 	ctx.DeleteMessages(chat.GetID(), toDel)

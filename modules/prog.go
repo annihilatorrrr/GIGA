@@ -3,16 +3,16 @@ package modules
 import (
 	"os"
 
-	"github.com/anonyindian/gotgproto/dispatcher"
-	"github.com/anonyindian/gotgproto/dispatcher/handlers"
-	"github.com/anonyindian/gotgproto/ext"
 	"github.com/anonyindian/logger"
+	"github.com/celestix/gotgproto/dispatcher"
+	"github.com/celestix/gotgproto/dispatcher/handlers"
+	"github.com/celestix/gotgproto/ext"
 	"github.com/gigauserbot/giga/bot/helpmaker"
 	"github.com/gigauserbot/giga/utils"
 	"github.com/gotd/td/tg"
 )
 
-func (m *module) LoadProg(dispatcher *dispatcher.CustomDispatcher) {
+func (m *module) LoadProg(dispatcher dispatcher.Dispatcher) {
 	var l = m.Logger.Create("PROG")
 	defer l.ChangeLevel(logger.LevelInfo).Println("LOADED")
 	helpmaker.SetModuleHelp("prog", `

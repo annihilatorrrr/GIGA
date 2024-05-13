@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anonyindian/gotgproto"
-	"github.com/anonyindian/gotgproto/ext"
-	"github.com/anonyindian/gotgproto/storage"
-	"github.com/anonyindian/gotgproto/types"
 	"github.com/anonyindian/logger"
+	"github.com/celestix/gotgproto"
+	"github.com/celestix/gotgproto/ext"
+	"github.com/celestix/gotgproto/storage"
+	"github.com/celestix/gotgproto/types"
 	"github.com/gigauserbot/giga/bot"
 	"github.com/gigauserbot/giga/config"
 	"github.com/gigauserbot/giga/db"
@@ -26,11 +26,13 @@ var (
 )
 
 // StartupAutomations includes the stuff to be done on each startup
-func StartupAutomations(l *logger.Logger, ctx *ext.Context, client *telegram.Client) {
+func StartupAutomations(l *logger.Logger, ctx *ext.Context, client *gotgproto.Client) {
 	if group := setupLogsGroup(ctx, client); group != 0 {
 		_, err := ctx.SendMessage(group, &tg.MessagesSendMessageRequest{
-			Message:      "Your GIGA is alive!",
-			ReplyToMsgID: trySendingFile(ctx, group),
+			Message: "Your GIGA is alive!",
+			ReplyTo: &tg.InputReplyToMessage{
+				ReplyToMsgID: trySendingFile(ctx, group),
+			},
 		})
 		if err != nil {
 			// check err in string because unwrapping didn't work
@@ -54,7 +56,7 @@ func StartupAutomations(l *logger.Logger, ctx *ext.Context, client *telegram.Cli
 		bot.Username = b.Username
 		bot.StartClient(l, b)
 	} else if db.GetSettings().Token == "" {
-		uname := setupBot(ctx, client, nil)
+		uname := setupBot(ctx, nil)
 		if uname == "BOT_NOT_CREATED" {
 			fmt.Println("failed to create bot")
 			return
@@ -79,7 +81,7 @@ func StartupAutomations(l *logger.Logger, ctx *ext.Context, client *telegram.Cli
 
 var TOKEN_REGEXP = regexp.MustCompile(`(\d+:[a-zA-Z0-9_\-]+)`)
 
-func setupBot(ctx *ext.Context, client *telegram.Client, u types.EffectiveChat) string {
+func setupBot(ctx *ext.Context, u types.EffectiveChat) string {
 	if u == nil {
 		u, _ = ctx.ResolveUsername("botfather")
 	}
@@ -88,12 +90,13 @@ func setupBot(ctx *ext.Context, client *telegram.Client, u types.EffectiveChat) 
 		Message: "/cancel",
 	})
 	if err != nil && strings.Contains(err.Error(), "YOU_BLOCKED_USER") {
-		if ok, _ := ctx.Client.ContactsUnblock(ctx, &tg.InputPeerUser{
-			UserID:     u.GetID(),
-			AccessHash: u.GetAccessHash(),
+		if ok, _ := ctx.Raw.ContactsBlock(ctx, &tg.ContactsBlockRequest{
+			ID: &tg.InputPeerUser{
+				UserID:     u.GetID(),
+				AccessHash: u.GetAccessHash(),
+			},
 		}); ok {
-			return setupBot(ctx, client, u)
-
+			return setupBot(ctx, u)
 		}
 	}
 	time.Sleep(time.Second)
@@ -105,7 +108,7 @@ func setupBot(ctx *ext.Context, client *telegram.Client, u types.EffectiveChat) 
 		Message: "GIGA Helper Bot",
 	})
 	time.Sleep(time.Second * 1)
-	uname := fmt.Sprintf("@GIGA_%s%dbot", string(gotgproto.Self.FirstName[0]), time.Now().Unix())
+	uname := fmt.Sprintf("@GIGA_%s%dbot", string(ctx.Self.FirstName[0]), time.Now().Unix())
 	ctx.SendMessage(u.GetID(), &tg.MessagesSendMessageRequest{
 		Message: uname,
 	})
@@ -129,25 +132,28 @@ func setupBot(ctx *ext.Context, client *telegram.Client, u types.EffectiveChat) 
 	return uname
 }
 
-func setupLogsGroup(ctx *ext.Context, client *telegram.Client) int64 {
+func setupLogsGroup(ctx *ext.Context, client *gotgproto.Client) int64 {
 	if group := db.GetSettings().LogsGroup; group != 0 {
 		return group
 	}
 	u, _ := ctx.ResolveUsername("GIGAubot")
-	upd, _ := client.API().MessagesCreateChat(ctx, &tg.MessagesCreateChatRequest{
+	ivs, err := client.API().MessagesCreateChat(ctx, &tg.MessagesCreateChatRequest{
 		Users: []tg.InputUserClass{&tg.InputUser{
 			UserID:     u.GetID(),
 			AccessHash: u.GetAccessHash(),
 		}},
 		Title: "GIGA Userbot Logs",
 	})
-	update, ok := upd.(*tg.Updates)
+	if err != nil {
+		return 0
+	}
+	update, ok := ivs.Updates.(*tg.Updates)
 	if !ok {
 		return 0
 	}
 	group := update.Chats[0].GetID()
 	// Add created group's peer to storage coz gotgproto still doesn't do that :P
-	storage.AddPeer(group, storage.DefaultAccessHash, storage.TypeChat, storage.DefaultUsername)
+	client.PeerStorage.AddPeer(group, storage.DefaultAccessHash, storage.TypeChat, storage.DefaultUsername)
 	db.UpdateLogs(group)
 	return group
 }
@@ -161,13 +167,13 @@ func GetBotToken(l *logger.Logger) func(ctx *ext.Context, u *ext.Update) error {
 		if chat.GetID() != BotFatherId {
 			return nil
 		}
-		if !TOKEN_REGEXP.MatchString(u.EffectiveMessage.Message) {
+		if !TOKEN_REGEXP.MatchString(u.EffectiveMessage.Text) {
 			return nil
 		}
-		token := TOKEN_REGEXP.FindString(u.EffectiveMessage.Message)
+		token := TOKEN_REGEXP.FindString(u.EffectiveMessage.Text)
 		b, err := bot.MakeBot(token)
 		if err != nil {
-			uname := setupBot(ctx, TelegramClient, nil)
+			uname := setupBot(ctx, nil)
 			if uname == "BOT_NOT_CREATED" {
 				return nil
 			}
@@ -184,7 +190,7 @@ func GetBotToken(l *logger.Logger) func(ctx *ext.Context, u *ext.Update) error {
 }
 
 func trySendingFile(ctx *ext.Context, chatId int64) int {
-	upload := uploader.NewUploader(ctx.Client)
+	upload := uploader.NewUploader(ctx.Raw)
 	f, err := upload.FromPath(ctx, "assets/giga.webp")
 	if err != nil {
 		return 0

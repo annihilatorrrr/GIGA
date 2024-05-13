@@ -4,16 +4,16 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/anonyindian/gotgproto/ext"
-	"github.com/anonyindian/gotgproto/types"
+	"github.com/celestix/gotgproto/ext"
+	"github.com/celestix/gotgproto/types"
 	"github.com/gotd/td/tg"
 )
 
-func ExtractUser(ctx *ext.Context, msg *tg.Message, chat types.EffectiveChat) (target int64, err error) {
-	if id := msg.ReplyTo.ReplyToMsgID; id != 0 {
+func ExtractUser(ctx *ext.Context, msg *types.Message, chat types.EffectiveChat) (target int64, err error) {
+	if reply, ok := msg.ReplyTo.(*tg.MessageReplyHeader); ok && reply.ReplyToMsgID != 0 {
 		var m []tg.MessageClass
 		m, err = ctx.GetMessages(chat.GetID(), []tg.InputMessageClass{&tg.InputMessageID{
-			ID: id,
+			ID: reply.ReplyToMsgID,
 		}})
 		if err != nil {
 			return
@@ -24,7 +24,7 @@ func ExtractUser(ctx *ext.Context, msg *tg.Message, chat types.EffectiveChat) (t
 		}
 	}
 	if target == 0 {
-		args := strings.Fields(msg.Message)
+		args := strings.Fields(msg.Text)
 		if !(len(args) > 1 && strings.HasPrefix(args[1], "@")) {
 			err = errors.New("no user provided")
 			return

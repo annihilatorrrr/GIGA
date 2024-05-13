@@ -3,17 +3,17 @@ package modules
 import (
 	"fmt"
 
-	"github.com/anonyindian/gotgproto/dispatcher"
-	"github.com/anonyindian/gotgproto/dispatcher/handlers"
-	"github.com/anonyindian/gotgproto/ext"
-	"github.com/anonyindian/gotgproto/parsemode/entityhelper"
 	"github.com/anonyindian/logger"
+	"github.com/celestix/gotgproto/dispatcher"
+	"github.com/celestix/gotgproto/dispatcher/handlers"
+	"github.com/celestix/gotgproto/ext"
+	"github.com/celestix/gotgproto/parsemode/entityhelper"
 	"github.com/gigauserbot/giga/bot/helpmaker"
 	"github.com/gigauserbot/giga/utils"
 	"github.com/gotd/td/tg"
 )
 
-func (m *module) LoadUpdate(dp *dispatcher.CustomDispatcher) {
+func (m *module) LoadUpdate(dp dispatcher.Dispatcher) {
 	var l = m.Logger.Create("UPDATER")
 	defer l.ChangeLevel(logger.LevelInfo).Println("LOADED")
 	helpmaker.SetModuleHelp("updater", `

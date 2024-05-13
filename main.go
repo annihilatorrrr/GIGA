@@ -1,25 +1,20 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"os"
 	"time"
 
-	"github.com/anonyindian/gotgproto"
-	"github.com/anonyindian/gotgproto/dispatcher"
-	"github.com/anonyindian/gotgproto/dispatcher/handlers"
-	"github.com/anonyindian/gotgproto/dispatcher/handlers/filters"
-	"github.com/anonyindian/gotgproto/ext"
-	"github.com/anonyindian/gotgproto/generic"
-	"github.com/anonyindian/gotgproto/sessionMaker"
 	"github.com/anonyindian/logger"
+	"github.com/celestix/gotgproto"
+	"github.com/celestix/gotgproto/dispatcher/handlers"
+	"github.com/celestix/gotgproto/dispatcher/handlers/filters"
+	"github.com/celestix/gotgproto/generic"
 	"github.com/gigauserbot/giga/bot/helpmaker"
 	"github.com/gigauserbot/giga/config"
 	"github.com/gigauserbot/giga/db"
 	"github.com/gigauserbot/giga/modules"
 	"github.com/gigauserbot/giga/utils"
-	"github.com/gotd/td/telegram"
 	"github.com/gotd/td/telegram/dcs"
 	"github.com/gotd/td/tg"
 )
@@ -57,55 +52,49 @@ func main() {
 
 func runClient(l *logger.Logger) {
 	log := l.Create("CLIENT")
-	// custom dispatcher handles all the updates
-	dp := dispatcher.MakeDispatcher()
-	dp.AddHandlerToGroup(handlers.NewMessage(filters.Message.Text, utils.GetBotToken(l)), 2)
-	gotgproto.StartClient(&gotgproto.ClientHelper{
+
+	client, err := gotgproto.NewClient(
 		// Get AppID from https://my.telegram.org/apps
-		AppID: config.ValueOf.AppId,
+		config.ValueOf.AppId,
 		// Get ApiHash from https://my.telegram.org/apps
-		ApiHash: config.ValueOf.ApiHash,
-		// Session of your client
-		// sessionName: name of the session / session string in case of TelethonSession or StringSession
-		// sessionType: can be any out of Session, TelethonSession, StringSession.
-		Session: sessionMaker.NewSession(config.GetSessionString(), config.GetSessionType()),
-		// Make sure to specify custom dispatcher here in order to enjoy gotgproto's update handling
-		Dispatcher: dp,
-		// Add the handlers, post functions in TaskFunc
-		TaskFunc: func(ctx context.Context, client *telegram.Client) error {
-			go func() {
-				for {
-					if gotgproto.Sender != nil {
-						log.ChangeLevel(logger.LevelInfo).Println("STARTED")
-						break
-					}
-				}
-				ctx := ext.NewContext(ctx, client.API(), gotgproto.Self, gotgproto.Sender, &tg.Entities{})
-				utils.TelegramClient = client
-				if *restartMsgId == 0 && *restartMsgText == "" {
-					utils.StartupAutomations(l, ctx, client)
-				} else {
-					generic.EditMessage(ctx, *restartChatId, &tg.MessagesEditMessageRequest{
-						ID:      *restartMsgId,
-						Message: *restartMsgText,
-					})
-				}
-				// Modules shall not be loaded unless the setup is complete
-				modules.Load(l, dp)
-				helpmaker.MakeHelp()
+		config.ValueOf.ApiHash,
+		// ClientType, as we defined above
+		gotgproto.ClientTypePhone(""),
+		// Optional parameters of client
+		&gotgproto.ClientOpts{
+			Session:          config.GetSession(),
+			DisableCopyright: true,
+			DCList: func() (dct dcs.List) {
 				if config.ValueOf.TestServer {
-					l.ChangeLevel(logger.LevelMain).Println("RUNNING ON TEST SERVER")
+					dct = dcs.Test()
 				}
-				l.ChangeLevel(logger.LevelMain).Println("GIGA HAS BEEN STARTED")
-			}()
-			return nil
+				return
+			}(),
 		},
-		DisableCopyright: true,
-		DCList: func() (dct dcs.List) {
-			if config.ValueOf.TestServer {
-				dct = dcs.Test()
-			}
-			return
-		}(),
-	})
+	)
+	if err != nil {
+		log.Fatalln("failed to start client:", err)
+	}
+	log.ChangeLevel(logger.LevelInfo).Println("STARTED")
+	utils.TelegramClient = client.Client
+	config.Self = client.Self
+	dispatcher := client.Dispatcher
+	dispatcher.AddHandlerToGroup(handlers.NewMessage(filters.Message.Text, utils.GetBotToken(l)), 2)
+	ctx := client.CreateContext()
+	if *restartMsgId == 0 && *restartMsgText == "" {
+		utils.StartupAutomations(l, ctx, client)
+	} else {
+		generic.EditMessage(ctx, *restartChatId, &tg.MessagesEditMessageRequest{
+			ID:      *restartMsgId,
+			Message: *restartMsgText,
+		})
+	}
+	// Modules shall not be loaded unless the setup is complete
+	modules.Load(l, dispatcher)
+	helpmaker.MakeHelp()
+	if config.ValueOf.TestServer {
+		l.ChangeLevel(logger.LevelMain).Println("RUNNING ON TEST SERVER")
+	}
+	l.ChangeLevel(logger.LevelMain).Println("GIGA HAS BEEN STARTED")
+	client.Idle()
 }

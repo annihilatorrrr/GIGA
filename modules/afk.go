@@ -5,21 +5,22 @@ import (
 	"html"
 	"strings"
 
-	"github.com/anonyindian/gotgproto"
-	"github.com/anonyindian/gotgproto/dispatcher"
-	"github.com/anonyindian/gotgproto/dispatcher/handlers"
-	"github.com/anonyindian/gotgproto/dispatcher/handlers/filters"
-	"github.com/anonyindian/gotgproto/ext"
-	"github.com/anonyindian/gotgproto/parsemode/stylisehelper"
-	"github.com/anonyindian/gotgproto/storage/cache"
+	"github.com/AnimeKaizoku/cacher"
 	"github.com/anonyindian/logger"
+	"github.com/celestix/gotgproto/dispatcher"
+	"github.com/celestix/gotgproto/dispatcher/handlers"
+	"github.com/celestix/gotgproto/dispatcher/handlers/filters"
+	"github.com/celestix/gotgproto/ext"
+	"github.com/celestix/gotgproto/parsemode/stylisehelper"
 	"github.com/gigauserbot/giga/bot/helpmaker"
 	"github.com/gigauserbot/giga/db"
 	"github.com/gotd/td/telegram/message/styling"
 	"github.com/gotd/td/tg"
 )
 
-func (m *module) LoadAfk(dispatcher *dispatcher.CustomDispatcher) {
+var afkCache = cacher.NewCacher[int64, bool](&cacher.NewCacherOpts{})
+
+func (m *module) LoadAfk(dispatcher dispatcher.Dispatcher) {
 	var l = m.Logger.Create("AFK")
 	defer l.ChangeLevel(logger.LevelInfo).Println("LOADED")
 	helpmaker.SetModuleHelp("afk", `
@@ -33,7 +34,7 @@ func (m *module) LoadAfk(dispatcher *dispatcher.CustomDispatcher) {
 }
 
 func afk(ctx *ext.Context, u *ext.Update) error {
-	args := strings.Fields(u.EffectiveMessage.Message)
+	args := strings.Fields(u.EffectiveMessage.Text)
 	chat := u.EffectiveChat()
 	if len(args) > 1 {
 		switch args[1] {
@@ -83,14 +84,13 @@ func checkAfk(ctx *ext.Context, u *ext.Update) error {
 		// Don't reply to bots ffs
 		return nil
 	}
-	if !(u.EffectiveMessage.Mentioned || (chat.IsAUser() && chat.GetID() != gotgproto.Self.ID)) {
+	if !(u.EffectiveMessage.Mentioned || (chat.IsAUser() && chat.GetID() != ctx.Self.ID)) {
 		return nil
 	}
-	afkCheckKey := fmt.Sprintf("afk-check-%d", user.ID)
-	if _, err := cache.Cache.Get(afkCheckKey); err == nil {
+	if _, ok := afkCache.Get(user.ID); ok {
 		return nil
 	}
-	go cache.Cache.Set(afkCheckKey, make([]byte, 0))
+	afkCache.Set(user.ID, true)
 	afk := db.GetAFK()
 	if !afk.Toggle {
 		return nil

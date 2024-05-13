@@ -22,7 +22,7 @@ All the handlers will be allocated to the main dispatcher stream through this `L
 package modules
 
 import (
-    "github.com/anonyindian/gotgproto/dispatcher"
+    "github.com/celestix/gotgproto/dispatcher"
 )
 
 func (*module) LoadFoo(dp *dispatcher.CustomDispatcher) {
@@ -73,7 +73,7 @@ In order to add help section for your module, you have to call `SetModuleHelp` f
 package modules
 
 import (
-    "github.com/anonyindian/gotgproto/dispatcher"
+    "github.com/celestix/gotgproto/dispatcher"
 )
 
 func (*module) LoadFoo(dp *dispatcher.CustomDispatcher) {
@@ -99,10 +99,10 @@ package modules
 import (
 	"fmt"
 
-	"github.com/anonyindian/gotgproto/dispatcher"
-    "github.com/anonyindian/gotgproto/dispatcher/handlers"
-	"github.com/anonyindian/gotgproto/dispatcher/handlers/filters"
-	"github.com/anonyindian/gotgproto/ext"
+	"github.com/celestix/gotgproto/dispatcher"
+    "github.com/celestix/gotgproto/dispatcher/handlers"
+	"github.com/celestix/gotgproto/dispatcher/handlers/filters"
+	"github.com/celestix/gotgproto/ext"
 	"github.com/anonyindian/logger"
 	"github.com/gigauserbot/giga/bot/helpmaker"
 )

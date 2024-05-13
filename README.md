@@ -6,7 +6,7 @@
 <a href="https://telegram.me/GIGAsupport"><img src="https://img.shields.io/badge/Support%20Group-blue?logo=telegram"></a>
 </p>
 
-GIGA is a powerful telegram userbot written in Go with the help of [gotd](https://github.com/gotd/td) and [gotgproto](https://github.com/anonyindian/gotgproto).
+GIGA is a powerful telegram userbot written in Go with the help of [gotd](https://github.com/gotd/td) and [gotgproto](https://github.com/celestix/gotgproto).
 
 ## Deployment
 The userbot is still under development but you can deploy it through your console by following a few steps:
