@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -35,7 +34,7 @@ func Load(l *logger.Logger) {
 	l = l.Create("CONFIG")
 	defer l.ChangeLevel(logger.LevelMain).Println("LOADED")
 	initPlatform()
-	b, err := ioutil.ReadFile("config.json")
+	b, err := os.ReadFile("config.json")
 	if err != nil {
 		if err := ValueOf.setupEnvVars(l); err != nil {
 			l.ChangeLevel(logger.LevelError).Println(err.Error())
